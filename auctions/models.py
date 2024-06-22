@@ -26,6 +26,7 @@ class Listing(models.Model):
 
 class Bid(models.Model):
     id = models.AutoField(primary_key=True)
+    listing = models.ForeignKey(Listing, on_delete=models.CASCADE, related_name="bids", default=1)
     bid = models.PositiveIntegerField()
 
     def __str__(self):
@@ -33,7 +34,8 @@ class Bid(models.Model):
 
 class Comment(models.Model):
     id = models.AutoField(primary_key=True)
-    comment = models.TextField(blank=True)
+    listing = models.ForeignKey(Listing, on_delete=models.CASCADE, related_name="comments", default=1)
+    comment = models.TextField(blank=False)
 
     def __str__(self):
         return f"{self.comment}"

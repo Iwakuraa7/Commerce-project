@@ -5,7 +5,7 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import reverse
 
-from .models import User, Category, Listing
+from .models import User, Category, Listing, Bid
 
 
 def index(request):
@@ -88,11 +88,22 @@ def create_listing(request):
 
 @login_required(login_url="login")
 def listing_page(request, listing_id):
+    listing = Listing.objects.get(pk=listing_id)
     # TODO: Listing page(new bid, watchlist, user_info, delete/add watchlist)
     if request.method == "POST":
-        new_bid = request.POST["new_bid"]
+        new_bid = int(request.POST["new_bid"])
+        if new_bid > listing.start_bid:
+            higher_bid = Bid(listing=listing_id, bid=new_bid)
+            higher_bid.save()
+            msg = "Bid placed successfully!"
+        else:
+            msg = "Can't place a bid that is lower than the previous bids."
 
-    listing = Listing.objects.get(pk=listing_id)
+        return render(request, "auctions/listing-page.html", {
+                "listing": listing,
+                "msg": msg
+            })
+
     return render(request, "auctions/listing-page.html", {
-        "listing": listing
+        "listing": listing,
     })

@@ -1,7 +1,9 @@
 {% extends "auctions/layout.html" %}
 
 {% block body %}
-
+    {% if msg %}
+        <strong>{{ msg }}</strong>
+    {% endif %}
     <h2>{{ listing.title }}</h2>
     <p>Category: {{ listing.category }}</p>
     <div style="width: 500px; height: 500px; display: flex; justify-content: center; align-items: center;">
@@ -9,7 +11,7 @@
     </div>
     <p>{{ listing.description }}</p>
     <h3>${{ listing.start_bid }}</h3>
-    <form action="{% url 'listing_page' listing.id %}">
+    <form action="{% url 'listing_page' listing.id %}" method="post">
     {% csrf_token %}
         <input type="number" name="new_bid" placeholder="Bid"><br>
         <input type="submit" value="Place Bid">
