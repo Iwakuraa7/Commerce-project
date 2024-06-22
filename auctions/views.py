@@ -1,6 +1,7 @@
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError
+from django.db.models import Max
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import reverse
@@ -12,7 +13,7 @@ def index(request):
     active_listings = Listing.objects.all()
 
     return render(request, "auctions/index.html", {
-        "listings": active_listings
+        "listings": active_listings,
     })
 
 
@@ -80,6 +81,11 @@ def create_listing(request):
 
         new_listing = Listing(title=title, description=description, start_bid=start_bid, image_url=image_url, category=category)
         new_listing.save()
+
+        new_bid = Bid(listing=new_listing, bid=start_bid)
+        new_bid.save()
+        new_listing.bids.add(new_bid)
+
         return HttpResponseRedirect(reverse("create"))
 
     return render(request, "auctions/create-listing.html", {
@@ -89,21 +95,27 @@ def create_listing(request):
 @login_required(login_url="login")
 def listing_page(request, listing_id):
     listing = Listing.objects.get(pk=listing_id)
-    # TODO: Listing page(new bid, watchlist, user_info, delete/add watchlist)
+    highest_bid = listing.bids.aggregate(Max('bid'))['bid__max'] or listing.start_bid
+
     if request.method == "POST":
         new_bid = int(request.POST["new_bid"])
         if new_bid > listing.start_bid:
-            higher_bid = Bid(listing=listing_id, bid=new_bid)
+            higher_bid = Bid(listing=listing, bid=new_bid)
             higher_bid.save()
+            highest_bid = new_bid
+            listing.start_bid = highest_bid
+            listing.save()
             msg = "Bid placed successfully!"
         else:
             msg = "Can't place a bid that is lower than the previous bids."
 
         return render(request, "auctions/listing-page.html", {
                 "listing": listing,
-                "msg": msg
+                "msg": msg,
+                "highest_bid": highest_bid
             })
 
     return render(request, "auctions/listing-page.html", {
         "listing": listing,
+        "highest_bid": highest_bid
     })
