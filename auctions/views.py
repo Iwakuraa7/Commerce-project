@@ -10,7 +10,7 @@ from .models import User, Category, Listing, Bid
 
 
 def index(request):
-    active_listings = Listing.objects.all()
+    active_listings = Listing.objects.exclude(active=False)
 
     return render(request, "auctions/index.html", {
         "listings": active_listings,
@@ -70,6 +70,7 @@ def register(request):
 
 @login_required(login_url="login")
 def create_listing(request):
+    # to list the categories
     categories = Category.objects.all()
 
     if request.method == "POST":
@@ -78,12 +79,16 @@ def create_listing(request):
         start_bid = request.POST["start-bid"]
         image_url = request.POST["image-url"]
         category = Category.objects.get(pk=request.POST["category"])
+        user = request.user
 
-        new_listing = Listing(title=title, description=description, start_bid=start_bid, image_url=image_url, category=category)
+        # Create new listing + the user info
+        new_listing = Listing(title=title, description=description, start_bid=start_bid, image_url=image_url, category=category, user=user)
         new_listing.save()
 
+        # Create new bid with for the new listing
         new_bid = Bid(listing=new_listing, bid=start_bid)
         new_bid.save()
+        # Append the new bid to the bids list of the new listing
         new_listing.bids.add(new_bid)
 
         return HttpResponseRedirect(reverse("create"))
@@ -95,21 +100,36 @@ def create_listing(request):
 @login_required(login_url="login")
 def listing_page(request, listing_id):
     listing = Listing.objects.get(pk=listing_id)
+    # Returns the max bid within the bids of the listing with the current id
     highest_bid = listing.bids.aggregate(Max('bid'))['bid__max'] or listing.start_bid
 
     if request.method == "POST":
-        new_bid = int(request.POST["new_bid"])
-        if new_bid > listing.start_bid:
-            higher_bid = Bid(listing=listing, bid=new_bid)
-            higher_bid.save()
-            highest_bid = new_bid
-            listing.start_bid = highest_bid
+        if request.POST["close_bool"] == "true":
+            listing.active = False
             listing.save()
-            msg = "Bid placed successfully!"
-        else:
-            msg = "Can't place a bid that is lower than the previous bids."
 
-        return render(request, "auctions/listing-page.html", {
+            return render(request, "auctions/listing-page.html", {
+            "listing": listing
+            })
+
+        if request.POST["new_bid"]:
+            new_bid = int(request.POST["new_bid"])
+            if new_bid > listing.start_bid:
+                # For this listing, append new bid, cuz its > than prev
+                higher_bid = Bid(listing=listing, bid=new_bid)
+                higher_bid.save()
+                highest_bid = new_bid
+                # Some sussy code in order to represent the highest bid on index page
+                listing.start_bid = highest_bid
+                listing.save()
+                # Save the current bidder user info to the listing with the current id
+                listing.highest_bidder = request.user
+                listing.save()
+                msg = "Bid placed successfully!"
+            else:
+                msg = "Can't place a bid that is lower than the previous bids."
+
+            return render(request, "auctions/listing-page.html", {
                 "listing": listing,
                 "msg": msg,
                 "highest_bid": highest_bid
