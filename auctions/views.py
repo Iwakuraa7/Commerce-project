@@ -6,7 +6,7 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import reverse
 
-from .models import User, Category, Listing, Bid
+from .models import User, Category, Listing, Bid, Comment
 
 
 def index(request):
@@ -103,39 +103,61 @@ def listing_page(request, listing_id):
     # Returns the max bid within the bids of the listing with the current id
     highest_bid = listing.bids.aggregate(Max('bid'))['bid__max'] or listing.start_bid
 
-    if request.method == "POST":
-        if request.POST["close_bool"] == "true":
-            listing.active = False
+    if request.method != "POST":
+        return render(request, "auctions/listing-page.html", {
+            "listing": listing,
+            "highest_bid": highest_bid,
+            "comments": listing.comments.all()
+        })
+
+    if request.POST["new_comment"]:
+        new_comment = Comment(listing=listing, comment=request.POST["new_comment"], user=request.user)
+        new_comment.save()
+        listing.comments.add(new_comment)
+        msg = "Your comment has been added."
+
+    if request.POST["close_bool"] == "true":
+        listing.active = False
+        listing.save()
+
+        return render(request, "auctions/listing-page.html", {
+        "listing": listing
+        })
+
+    if request.POST["new_bid"]:
+        new_bid = int(request.POST["new_bid"])
+        if new_bid > listing.start_bid:
+            # For this listing, append new bid, cuz its > than prev
+            higher_bid = Bid(listing=listing, bid=new_bid)
+            higher_bid.save()
+            highest_bid = new_bid
+            # Some sussy code in order to represent the highest bid on index page
+            listing.start_bid = highest_bid
             listing.save()
-
-            return render(request, "auctions/listing-page.html", {
-            "listing": listing
-            })
-
-        if request.POST["new_bid"]:
-            new_bid = int(request.POST["new_bid"])
-            if new_bid > listing.start_bid:
-                # For this listing, append new bid, cuz its > than prev
-                higher_bid = Bid(listing=listing, bid=new_bid)
-                higher_bid.save()
-                highest_bid = new_bid
-                # Some sussy code in order to represent the highest bid on index page
-                listing.start_bid = highest_bid
-                listing.save()
-                # Save the current bidder user info to the listing with the current id
-                listing.highest_bidder = request.user
-                listing.save()
-                msg = "Bid placed successfully!"
-            else:
-                msg = "Can't place a bid that is lower than the previous bids."
-
-            return render(request, "auctions/listing-page.html", {
-                "listing": listing,
-                "msg": msg,
-                "highest_bid": highest_bid
-            })
+            # Save the current bidder user info to the listing with the current id
+            listing.highest_bidder = request.user
+            listing.save()
+            msg = "Bid placed successfully!"
+        else:
+            msg = "Can't place a bid that is lower than the previous bids."
 
     return render(request, "auctions/listing-page.html", {
         "listing": listing,
-        "highest_bid": highest_bid
+        "msg": msg,
+        "highest_bid": highest_bid,
+        "comments": listing.comments.all()
+    })
+
+def category_view(request):
+    categories = Category.objects.all()
+    if request.method == "POST":
+        category_choice = request.POST["category_choice"]
+        related_category_pages = Listing.objects.filter(category=category_choice, active=True)
+        return render(request, "auctions/categories-page.html", {
+            "related_categories": related_category_pages,
+            "categories": categories
+        })
+
+    return render(request, "auctions/categories-page.html", {
+        "categories": categories,
     })

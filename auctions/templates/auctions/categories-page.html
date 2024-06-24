@@ -1,0 +1,31 @@
+{% extends "auctions/layout.html" %}
+
+{% block body %}
+    <h2>Select the category</h2>
+    <form action="{% url 'category' %}" method="post">
+    {% csrf_token %}
+        <select name="category_choice">
+            {% for category in categories %}
+                <option value="{{ category.id }}">{{ category }}</option>
+            {% endfor %}
+        </select>
+        <input type="submit" value="Ok">
+    </form>
+    
+    {% if request.method == "POST" %}
+        {% for listing in related_categories %}
+            <div class="listing_container" style="border: 1px darkgrey solid; display: flex; column-gap: 30px;">
+                <div style="width: 300px; height: 300px; display: flex; justify-content: center; align-items: center;">
+                    <img style="max-height: 100%; max-width: 100%" src="{{ listing.image_url }}">
+                </div>
+                <div style="display: flex; flex-direction: column; margin-top: 10px">
+                    <a href="{{ listing.id }}"><h4>{{ listing.title }}</h4></a>
+                    <p>{{ listing.description }}</p>
+                    <p><strong>Price: </strong>${{ listing.start_bid }}</p>
+                </div>
+            </div><br>
+        {% empty %}
+            <h3>Listings with this category doesn't exist.</h3>
+        {% endfor %}
+    {% endif %}
+{% endblock %}

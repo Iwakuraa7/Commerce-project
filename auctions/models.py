@@ -43,6 +43,7 @@ class Comment(models.Model):
     # to know to which listing comments belong to
     listing = models.ForeignKey(Listing, on_delete=models.CASCADE, related_name="comments", default=1)
     comment = models.TextField(blank=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="users_comments", default=1)
 
     def __str__(self):
         return f"{self.comment}"

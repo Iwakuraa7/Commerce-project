@@ -1,7 +1,7 @@
 {% extends "auctions/layout.html" %}
 
 {% block body %}
-    
+
     {% if listing.active == False %}
         {% if request.user.username == listing.highest_bidder.username %}
             <h2>Congratulations, {{ listing.highest_bidder.username }}! You've won this auction!</h2>
@@ -9,7 +9,7 @@
             <h2>The auction is closed. The winner is: {{ listing.highest_bidder.username }}</h2>
         {% endif %}
     {% endif %}
-    
+
     {# to catch bid info msgs #}
     {% if msg %}
         <strong>{{ msg }}</strong>
@@ -31,24 +31,35 @@
     {% endif %}
 
     {# checking whether the user is admin or bidder #}
-    {% if listing.active == True %}
-        {% if request.user.username != listing.user.username %}
-            <form action="{% url 'listing_page' listing.id %}" method="post">
-                {% csrf_token %}
+    <form action="{% url 'listing_page' listing.id %}" method="post">
+        {% csrf_token %}
+        {% if listing.active == True %}
+            {% if request.user.username != listing.user.username %}
                 <input type="hidden" value="false" name="close_bool">
                 <input type="number" name="new_bid" placeholder="Bid"><br><br>
                 <input type="submit" value="Place Bid">
-            </form>
-        {% endif %}
+            {% endif %}
 
-        {% if request.user.username == listing.user.username %}
-            <form action="{% url 'listing_page' listing.id %}" method="post">
-                {% csrf_token %}
+            {% if request.user.username == listing.user.username %}
                 <input type="hidden" name="new_bid" placeholder="Bid">
                 <input type="hidden" value="true" name="close_bool">
-                <input type="submit" value="Close the listing">
-            </form>
+                <input type="submit" value="Close the listing"><hr>
+            {% endif %}
         {% endif %}
-    {% endif %}
-    
+
+        <h3>Comments</h3>
+        <input type="hidden" value="false" name="close_bool">
+        <input type="text" style="position:relative; width: 90vw; height: 70px" name="new_comment">
+        <input type="submit" style="display: inline;" value="Ok">
+
+        {% for comment in comments %}
+            <div style="width: 90vw; height: 70px; border: 1px gainsboro solid; margin-top: 10px">
+                <h5>{{ comment.user.username }}:</h5>
+                <p>{{ comment }}</p>
+            </div>
+        {% empty %}
+            <h4>This auction currently has no comments.</h4>
+        {% endfor %}
+    </form>
+
 {% endblock %}
