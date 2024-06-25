@@ -100,54 +100,65 @@ def create_listing(request):
 @login_required(login_url="login")
 def listing_page(request, listing_id):
     listing = Listing.objects.get(pk=listing_id)
+    current_user = User.objects.get(username=request.user.username)
     # Returns the max bid within the bids of the listing with the current id
     highest_bid = listing.bids.aggregate(Max('bid'))['bid__max'] or listing.start_bid
+    msg = ""
 
-    if request.method != "POST":
-        return render(request, "auctions/listing-page.html", {
-            "listing": listing,
-            "highest_bid": highest_bid,
-            "comments": listing.comments.all()
-        })
+    if request.method == "POST":
+        new_comment = request.POST.get("new_comment")
+        close_listing = request.POST.get("close_listing")
+        new_bid = request.POST.get("new_bid")
+        watchlist = request.POST.get("watchlist")
+        remove_from_watchlist = request.POST.get("remove_from_watchlist")
 
-    if request.POST["new_comment"]:
-        new_comment = Comment(listing=listing, comment=request.POST["new_comment"], user=request.user)
-        new_comment.save()
-        listing.comments.add(new_comment)
-        msg = "Your comment has been added."
+        if new_comment:
+            comment = Comment(listing=listing, comment=request.POST["new_comment"], user=request.user)
+            comment.save()
+            listing.comments.add(comment)
+            msg = "Your comment has been added."
 
-    if request.POST["close_bool"] == "true":
-        listing.active = False
-        listing.save()
-
-        return render(request, "auctions/listing-page.html", {
-        "listing": listing
-        })
-
-    if request.POST["new_bid"]:
-        new_bid = int(request.POST["new_bid"])
-        if new_bid > listing.start_bid:
-            # For this listing, append new bid, cuz its > than prev
-            higher_bid = Bid(listing=listing, bid=new_bid)
-            higher_bid.save()
-            highest_bid = new_bid
-            # Some sussy code in order to represent the highest bid on index page
-            listing.start_bid = highest_bid
+        if close_listing:
+            listing.active = False
             listing.save()
-            # Save the current bidder user info to the listing with the current id
-            listing.highest_bidder = request.user
-            listing.save()
-            msg = "Bid placed successfully!"
-        else:
-            msg = "Can't place a bid that is lower than the previous bids."
+
+            return render(request, "auctions/listing-page.html", {
+            "listing": listing
+            })
+
+        if new_bid:
+            new_bid = int(new_bid)
+            if new_bid > listing.start_bid:
+                # For this listing, append new bid, cuz its > than prev
+                higher_bid = Bid(listing=listing, bid=new_bid)
+                higher_bid.save()
+                highest_bid = new_bid
+                # Some sussy code in order to represent the highest bid on index page
+                listing.start_bid = highest_bid
+                # Save the current bidder user info to the listing with the current id
+                listing.highest_bidder = request.user
+                listing.save()
+                msg = "Bid placed successfully!"
+            else:
+                msg = "Can't place a bid that is lower than the previous bids."
+
+        if watchlist:
+            current_user.watchlist.add(Listing.objects.get(pk=listing_id))
+            msg = "Listing has been added to your watchlist."
+
+        if remove_from_watchlist:
+            current_user.watchlist.remove(Listing.objects.get(pk=listing_id))
+            msg = "Listing has been removed from your watchlist"
 
     return render(request, "auctions/listing-page.html", {
         "listing": listing,
         "msg": msg,
         "highest_bid": highest_bid,
-        "comments": listing.comments.all()
+        "comments": listing.comments.all(),
+        "is_in_watchlist": listing in current_user.watchlist.all(),
     })
 
+@login_required(login_url="login")
 def category_view(request):
     categories = Category.objects.all()
     if request.method == "POST":
@@ -160,4 +171,12 @@ def category_view(request):
 
     return render(request, "auctions/categories-page.html", {
         "categories": categories,
+    })
+
+@login_required(login_url="login")
+def watchlist_view(request):
+    current_user = User.objects.get(username=request.user.username)
+
+    return render(request, "auctions/watchlist.html", {
+        "listings": current_user.watchlist.all()
     })

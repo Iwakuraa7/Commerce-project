@@ -14,12 +14,22 @@
     {% if msg %}
         <strong>{{ msg }}</strong>
     {% endif %}
-    
-    <h2>{{ listing.title }}</h2>
+
+    <div style="display: flex; column-gap: 2vw; align-items: center">
+        <h2>{{ listing.title }}</h2>
+        <form action="{% url 'listing_page' listing.id %}" method="post">
+            {% csrf_token %}
+            {% if is_in_watchlist %}
+                <input type="submit" value="Remove from Watchlist" name="remove_from_watchlist">
+            {% else %}
+                <input type="submit" value="Add to Watchlist" name="watchlist">
+            {% endif %}
+        </form>
+    </div>
     
     <p>Category: {{ listing.category }}</p>
     
-    <div style="width: 500px; height: 500px; display: flex; justify-content: center; align-items: center;">
+    <div style="width: 500px; height: 450px; display: flex; justify-content: center; align-items: center;">
         <img style="max-height: 100%; max-width: 100%" src="{{ listing.image_url }}">
     </div>
     
@@ -35,15 +45,12 @@
         {% csrf_token %}
         {% if listing.active == True %}
             {% if request.user.username != listing.user.username %}
-                <input type="hidden" value="false" name="close_bool">
                 <input type="number" name="new_bid" placeholder="Bid"><br><br>
                 <input type="submit" value="Place Bid">
             {% endif %}
 
             {% if request.user.username == listing.user.username %}
-                <input type="hidden" name="new_bid" placeholder="Bid">
-                <input type="hidden" value="true" name="close_bool">
-                <input type="submit" value="Close the listing"><hr>
+                <input type="submit" value="Close the listing" name="close_listing"><hr>
             {% endif %}
         {% endif %}
 

@@ -3,7 +3,7 @@ from .models import Listing, User, Category, Bid, Comment
 
 
 class ListingAdmin(admin.ModelAdmin):
-    list_display = ("id", "title", "description", "start_bid", "image_url", "category", "user", "highest_bidder", "active")
+    list_display = ("id", "user", "title", "description", "start_bid", "image_url", "category", "highest_bidder", "active")
 
 class UserAdmin(admin.ModelAdmin):
     list_display = ("id", "username", "password")
@@ -11,8 +11,14 @@ class UserAdmin(admin.ModelAdmin):
 class CommentAdmin(admin.ModelAdmin):
     list_display = ("id", "listing", "comment", "user")
 
+class BidAdmin(admin.ModelAdmin):
+    list_display = ("id", "listing", "bid")
+
+class CategoryAdmin(admin.ModelAdmin):
+    list_display = ("id", "category")
+
 admin.site.register(Listing, ListingAdmin)
 admin.site.register(User, UserAdmin)
-admin.site.register(Category)
-admin.site.register(Bid)
+admin.site.register(Category, CategoryAdmin)
+admin.site.register(Bid, BidAdmin)
 admin.site.register(Comment, CommentAdmin)

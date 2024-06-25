@@ -4,7 +4,10 @@ from django.db import models
 
 class User(AbstractUser):
     id = models.AutoField(primary_key=True)
-    pass
+    watchlist = models.ManyToManyField('Listing', blank=True, related_name="watchlisted_by")
+
+    def __str__(self):
+        return f"{self.id} : {self.username} : {self.password} : {self.watchlist}"
 
 class Category(models.Model):
     id = models.AutoField(primary_key=True)
